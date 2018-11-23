@@ -1,2 +1,0 @@
-overdriveVII.exe
-cmd.exe
