@@ -1,3 +1,3 @@
-@rem cl /Od /Zi /I"%ADLSDKROOT%\include" overdrive5.cpp wgetopt.c
-cl /Ox /I"%ADLSDKROOT%\include" overdrive5.cpp wgetopt.c
+@rem cl /Od /Zi /I"C:\Users\Mayna\Documents\Github\ADL\include" overdriveVII.cpp wgetopt.c
+cl /Ox /I"C:\Users\Mayna\Documents\Github\ADL\include" overdriveVII.cpp wgetopt.c
 
