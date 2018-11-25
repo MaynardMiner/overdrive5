@@ -1,17 +1,18 @@
 #ifndef __CADL_HPP__
 #define __CADL_HPP__
-
+ADL_CONTEXT_HANDLE context = NULL;  
 // Class for ADL interface
 class CADLCalls
 {
 #	if defined (LINUX)
 	typedef void* HINSTANCE;
 #	endif
-
 	enum CallID
 	{
 		E_ADL_Main_Control_Create,
 		E_ADL_Main_Control_Destroy,
+		E_ADL2_Main_Control_Create,
+		E_ADL2_Main_Control_Destroy,
 		E_ADL_Adapter_Active_Get,
 		E_ADL_Adapter_NumberOfAdapters_Get,
 		E_ADL_Adapter_AdapterInfo_Get,
@@ -30,6 +31,7 @@ class CADLCalls
 		E_ADL_Overdrive5_PowerControlInfo_Get,
 		E_ADL_Overdrive5_PowerControl_Get,
 		E_ADL_Overdrive5_PowerControl_Set,
+		E_ADL2_Overdrive6_CurrentPower_Get,
 		E_ADL_CALLID_MAX
 	};
 	
@@ -115,8 +117,11 @@ public:
 
 	bool Init(const char* dll_name)
 	{
+
 		mCallName[E_ADL_Main_Control_Create]					= "ADL_Main_Control_Create";
 		mCallName[E_ADL_Main_Control_Destroy]					= "ADL_Main_Control_Destroy";
+		mCallName[E_ADL2_Main_Control_Create]					= "ADL2_Main_Control_Create";
+		mCallName[E_ADL2_Main_Control_Destroy]					= "ADL2_Main_Control_Destroy";
 		mCallName[E_ADL_Adapter_Active_Get]						= "ADL_Adapter_Active_Get";
 		mCallName[E_ADL_Adapter_NumberOfAdapters_Get]			= "ADL_Adapter_NumberOfAdapters_Get";
 		mCallName[E_ADL_Adapter_AdapterInfo_Get]				= "ADL_Adapter_AdapterInfo_Get";
@@ -135,6 +140,7 @@ public:
 		mCallName[E_ADL_Overdrive5_PowerControlInfo_Get]		= "ADL_Overdrive5_PowerControlInfo_Get";
 		mCallName[E_ADL_Overdrive5_PowerControl_Get]			= "ADL_Overdrive5_PowerControl_Get";
 		mCallName[E_ADL_Overdrive5_PowerControl_Set]			= "ADL_Overdrive5_PowerControl_Set";
+		mCallName[E_ADL2_Overdrive6_CurrentPower_Get]			= "ADL2_Overdrive6_CurrentPower_Get";
 
 		mHDLL = LoadLibrary(dll_name);
 
@@ -177,6 +183,13 @@ public:
 		return Error = ((int (*)(ADL_MAIN_MALLOC_CALLBACK, int)) (mProcAddress[E_ADL_Main_Control_Create]))
 			(callback, iEnumConnectedAdapters);
 	};
+
+	int ADL2_Main_Control_Create(ADL_MAIN_MALLOC_CALLBACK callback, int iEnumConnectedAdapters, ADL_CONTEXT_HANDLE)
+	{
+		ADL_CONTEXT_HANDLE context = NULL;      
+		return Error = ((int (*)(ADL_MAIN_MALLOC_CALLBACK, int, void*)) (mProcAddress[E_ADL2_Main_Control_Create]))
+		(callback, iEnumConnectedAdapters, context);
+	};
 	
 	int ADL_Main_Control_Destroy()
 	{
@@ -184,10 +197,24 @@ public:
 			();
 	};
 
+	int ADL2_Main_Control_Destroy(ADL_CONTEXT_HANDLE)
+	{
+		ADL_CONTEXT_HANDLE context = NULL;      
+		return Error = ((int (*)(void*)) (mProcAddress[E_ADL2_Main_Control_Destroy]))
+			(context);
+	};
+
 	int ADL_Adapter_Active_Get(int iAdapterIndex, int *lpStatus)
 	{
 		return Error = ((int (*)(int,int*)) (mProcAddress[E_ADL_Adapter_Active_Get]))
 			(iAdapterIndex, lpStatus);
+	}
+
+	int ADL_Adapter_CurrentPower_Get(ADL_CONTEXT_HANDLE, int iAdapterIndex, int iPowerType, int *iWatts)
+	{
+		ADL_CONTEXT_HANDLE context = NULL;      
+		return Error = ((int (*)(void*, int,int,int*)) (mProcAddress[E_ADL2_Overdrive6_CurrentPower_Get]))
+			(context, iAdapterIndex, iPowerType, iWatts);
 	}
 
 	int ADL_Adapter_NumberOfAdapters_Get(int *lpNumAdapters)
@@ -313,7 +340,7 @@ public:
 	~CADL() 
 	{
 		ADL_Main_Control_Destroy();
-
+		ADL2_Main_Control_Destroy(context);
 		if (mpAdapterInfo) delete[] mpAdapterInfo;
 	}
 
@@ -348,9 +375,9 @@ public:
 					else fprintf(stderr, "Error: no any adapters present.\n");
 				}
 				else fprintf(stderr, "Error: cannot get the number of adapters.\n");
-			}
+		  }
 			else fprintf(stderr, "Error: cannot initialize ADL interface.\n");
-		}
+	   }
 
 		return mOK;
 	};

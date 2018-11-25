@@ -9,13 +9,21 @@
 #	include "wgetopt.h"
 #	define ADL_DLL_NAME	"atiadlxx.dll"
 #endif
-
+#include <cmath>
+#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include "ADL/include/adl_sdk.h"
 #include "cadl.hpp"
+#include <iostream>
+#include <fstream>
+#include <vector>
 
 #define ODPLVL_SIZE	20
+
+using namespace std;
+
+std::vector<std::string> v;
 
 class CADLOverdrive5: public CADL
 {
@@ -395,23 +403,17 @@ class CADLOverdrive5: public CADL
 		speed[0].iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_PERCENT;
 		speed[0].iFanSpeed = 0;
 		speed[0].iFlags = 0;
-		speed[1].iSize  = sizeof(speed[1]);
-		speed[1].iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_RPM;
-		speed[1].iFanSpeed = 0;
-		speed[1].iFlags = 0;
 
-		if (ADL_OK != ADL_Overdrive5_FanSpeed_Get(iAdapter, iTController, speed)
-		|| (ADL_OK != ADL_Overdrive5_FanSpeed_Get(iAdapter, iTController, speed+1)))
+		if (ADL_OK != ADL_Overdrive5_FanSpeed_Get(iAdapter, iTController, speed))
 			fprintf(stderr, "Error: cannot read Fan Speed.\n");
 
 		printf("GPU %d Fan=%d\n", iAdapter,speed[0].iFanSpeed);
-
+		
 		while (seconds-->0)
 		{
 			Sleep(1000);
 
-			if (ADL_OK != ADL_Overdrive5_FanSpeed_Get(iAdapter, iTController, speed)
-			|| (ADL_OK != ADL_Overdrive5_FanSpeed_Get(iAdapter, iTController, speed+1)))
+			if (ADL_OK != ADL_Overdrive5_FanSpeed_Get(iAdapter, iTController, speed))
 			{
 				fprintf(stderr, "Error: cannot read Fan Speed.\n");
 				break;
@@ -481,6 +483,41 @@ class CADLOverdrive5: public CADL
 		}
 	}
 
+		void* __stdcall ADL_Main_Memory_Alloc ( int iSize )
+		{
+    	 void* lpBuffer = malloc ( iSize );
+    	 return lpBuffer;
+		}
+		void __stdcall ADL_Main_Memory_Free ( void* lpBuffer )
+		{
+    	if ( NULL != lpBuffer )
+    	{
+        free ( lpBuffer );
+        lpBuffer = NULL;
+    	}
+		}
+
+	void GetCurrenPower(const int iAdapter, int seconds)
+	{
+		
+        ADL_CONTEXT_HANDLE context = NULL;
+		int ADLWatts = 0;
+
+    	if (ADL_OK == ADL_Adapter_CurrentPower_Get(context, iAdapter, 0, &ADLWatts))
+	     {
+		  printf("GPU %d Watts=%.1f\n", iAdapter,ADLWatts/256.f);
+			while (seconds-->0)
+			{
+				Sleep(1000);
+
+				if (ADL_OK == ADL_Adapter_CurrentPower_Get(context, iAdapter, 0, &ADLWatts))
+					printf("GPU %d Watts=%.1f\n", iAdapter,ADLWatts/256.f);
+				else break;
+			}
+		}
+		else printf("Failed to get power\n", iAdapter,ADLWatts/256.f);
+	}
+
 #	if defined (LINUX)
 	void Sleep(const int ms)
 	{
@@ -547,7 +584,7 @@ public:
 		odplvl[0].iSize = 0;
 
 		// read command line
-		while ((opt = getopt(argc, argv, ":hla:c:fF:J:Gg:qQAp:PS:DtT:wW:v:")) != -1)
+		while ((opt = getopt(argc, argv, ":hla:c:yY:fF:J:Gg:qQAp:PS:DtT:wW:v:")) != -1)
 		{
 			switch(opt) {
 			case 'h':
@@ -611,6 +648,12 @@ public:
 			case 'W':
 				SetPowerControl(iAdapter, atoi(optarg));
 				break;
+			case 'y':
+				GetCurrenPower(iAdapter, 0);
+				break;
+			case 'Y':
+				GetCurrenPower(iAdapter, atoi(optarg));
+				break;
 			case 'v':
 				Verbose = atoi(optarg);
 				break;
@@ -636,4 +679,5 @@ int main (int argc, char* argv[])
 	CADLOverdrive5 od5;
 
 	return od5.Run(argc, argv);
+	return(0);
 }
